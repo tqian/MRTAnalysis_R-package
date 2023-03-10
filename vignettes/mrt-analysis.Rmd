@@ -1,0 +1,261 @@
+---
+title: "Primary and Secondary Analysis for Micro-Randomized Trial (MRT)"
+author: "Tianchen Qian (t.qian@uci.edu), Shaolin Xiang, Zhaoxi Cheng"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+link-citations: yes
+bibliography: mhealth-ref.bib
+csl: biostatistics.csl
+vignette: >
+  %\VignetteIndexEntry{Primary and Secondary Analysis for Micro-Randomized Trial (MRT)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+# Introduction
+
+The `MRTAnalysis` package provides user-friendly functions to conduct primary and secondary analyses for micro-randomized trial (MRT), where the proximal outcomes are continuous or binary and the intervention option is binary. For continuous outcomes, the estimated causal effects are on the additive scale. For binary outcomes, the estimated causal effects are on the log relative risk scale. In particular, this package can be used to
+
+- estimate the marginal causal excursion effect
+- estimate the moderated causal excursion effect, i.e., the effect modification by time-fixed or time-varying covariates.
+
+MRT is an experimental design for optimizing mobile health interventions. The marginal and the moderated causal excursion effects are the quantities of interest in primary and secondary analyses for MRT. In this tutorial we briefly review MRT and causal excursion effects, and illustrate the use of the estimators implemented in this package for conducting primary and secondary analyses of MRT: `wcls()` (weighted and centered least squares, for MRT with continuous outcomes) and `emee()` (estimator for marginal excursion effect, for MRT with binary outcome).
+
+
+# Data Structure of an MRT
+
+In an MRT, each participant is repeatedly randomized among treatment options many times throughout the trial. Suppose there are $n$ participants, and for the $i$-th participant, they are enrolled in the trial for $m_i$ decision points. (In many MRT, the number of decision points $m_i$ is the same for all participants. This package also handles the setting where $m_i$ is different for different participants, so we present the data structure in a more general way.)
+
+For the $i$-th participant at the $t$-th decision point, we use the triplet $(X_{it}, A_{it}, Y_{i,t+1})$ to denote the data collected, where
+
+- $X_{it}$ denotes the (vector of) time-varying covariates.
+- $A_{it}$ denotes the binary treatment assignment; $A_{it} = 1$ if randomized to intervention, $A_{it} = 0$ if randomized to no intervention.
+  - $A_{it}$ is randomized with success probability $p_{it}$. For many MRTs the $p_{it}$ is a constant throughout the trial for all participants (e.g., $p_{it} = 0.6$), but for some MRTs $p_{it}$ may depend on the past observations of the participant and thus is different for different $(i,t)$ combinations. This packages handles both situations.
+- $Y_{i,t+1}$ denotes the proximal outcome (continuous or binary). The time subscript is $t+1$ to emphasize the fact that $Y_{i,t+1}$ is measured after $A_{it}$.
+
+
+## Availability
+
+An MRT may include availability considerations. When it is inappropriate or unethical to deliver interventions to an individual, that individual is considered "unavailable", and no intervention will be delivered at that decision point so $A_{it} = 0$.
+
+Mathematically, we use $I_{it}$ denotes the availability status of participant $i$ at decision point $t$: $I_{it} = 1$ if available and $I_{it} = 0$ if unavailable. Temporal-wise, availability $I_{it}$ is determined before $A_{it}$, and one can conceptualize it by considering $I_{it}$ to be measured at the same time as $X_{it}$.
+
+
+# Prepare Your Data Set for Analysis
+
+To use any of the estimators in this package, you need to prepare your data set as a `data.frame` in long format, meaning that each row records observations from a decision point of a participant. The `data.frame` should be sorted so that consecutive rows should be from adjacent decision points from the same participant. Furthermore, the data set should contain the following columns:
+
+- A user id column that distinguishes different participants.
+- An outcome column that contains the proximal outcome.
+- A treatment assignment column that contains the binary treatment assignment $A_{it}$ (0 or 1, 1 being the active treatment such as sending a push notification and 0 being the control option such as not sending a push notification).
+- Columns that record baseline and time-varying covariates that will be used as control variables and/or moderators in the analysis.
+  
+The data set may also contain the following columns, depending on your MRT:
+
+- If in your MRT the randomization probability is not a constant throughout, your data set should include a randomization probability column that contains the randomization probability $p_{it}$.
+- If your MRT has availability considerations, your data set should include an availability column that contains the availability status $I_{it}$.
+- Optional: If in your MRT the randomization probability is not a constant throughout, you may also provide an optional column that contains the so-called numerator probability. A carefully constructed numerator probability column may reduce the standard error of the causal effect estimates. If you are not sure what this numerator probability is, feel free to ignore it. See @boruvka2018assessing and @qian2021estimating for details.
+
+
+# Causal Excursion Effect Estimation for MRT with Continuous Outcomes
+
+```{r}
+library(MRTAnalysis)
+current_options <- options(digits = 3) # save current options for restoring later
+```
+
+## Fully Marginal Causal Excursion Effect
+
+The following code uses `wcls()` to estimate the fully marginal causal excursion effect from a synthetic data set `data_mimicHeartSteps` that mimics the HeartSteps V1 MRT (@klasnja2015). This data set contains observations for 37 individuals at 210 different time points. The data set contains the following variables:
+
++ `userid`: id number of an individual.
++ `time`: index of decision point.
++ `day_in_study`: day in the study.
++ `logstep_30min`: the proximal outcome, i.e., the step count in the 30 minutes following the current decision point (log-transformed).
++ `logstep_30min_lag1`: the proximal outcome at the previous decision point (lag-1 outcome), i.e., the step count in the 30 minutes following the previous decision point (log-transformed).
++ `logstep_pre30min`: the step count in the 30 minutes prior to the current decision point (log-transformed).
++ `is_at_home_or_work`: whether the individual is at home or work (=1) or at other locations (=0) at the current decision point.
++ `intervention`: whether the intervention is randomized to be delivered (=1) or not (=0) at the current decision point; the randomization probability is a constant 0.6 for this data set, mimicking HeartSteps V1.
++ `avail`: whether the individual is available (=1) or not (=0) at the current decision point.
+ 
+A summary of `data_mimicHeartSteps` is as follows:
+
+```{r}
+head(data_mimicHeartSteps, 10)
+```
+
+
+In the following function call of `wcls()`, we specify the proximal outcome variable by `outcome = logstep_30min`. We specify the treatment variable by `treatment = intervention`. We specify the constant randomization probability by `rand_prob = 0.6`. We specify the fully marginal effect as the quantity to be estimated by setting `moderator_formula = ~1`. We use `logstep_pre30min` as a control variable by setting `control_formula = ~logstep_pre30min`. We specify the availability variable by `availability = avail`.
+
+```{r}
+fit1 <- wcls(
+    data = data_mimicHeartSteps,
+    id = userid,
+    outcome = logstep_30min,
+    treatment = intervention,
+    rand_prob = 0.6,
+    moderator_formula = ~1,
+    control_formula = ~logstep_pre30min,
+    availability = avail
+)
+summary(fit1)
+```
+
+The `summary()` function provides the estimated causal excursion effect as well as the 95% confidence interval, standard error, and p-value. The only row in the output `$causal_excursion_effect` is named `(Intercept)`, indicating that this is the fully marginal effect (like an intercept in the causal effect model). In particular, the estimated marginal excursion effect is 0.157, with 95% confidence interval (0.031, 0.284), and p-value 0.016. The confidence interval and the p-value are based on a small sample correction technique that is based on Hotelling's T distribution, so the Hotelling's T statistic (`Hotelling`) and the degrees of freedom (`df1` and `df2`) are also printed. See @boruvka2018assessing for details on the small sample correction.
+
+One can include more control variables, e.g., by setting `control_formula = ~logstep_pre30min + logstep_30min_lag1 + is_at_home_or_work`. This is illustrated by the following code. Different choices of control variables should lead to similar causal effect estimates, but better control variables (i.e., those that are correlated with the proximal outcome) usually decrease the standard error of the causal effect estimates. This is the case here: the standard error of the marginal causal excursion effect decreases slightly from 0.062 to 0.061 after we included two additional control variables.
+
+```{r}
+fit2 <- wcls(
+    data = data_mimicHeartSteps,
+    id = userid,
+    outcome = logstep_30min,
+    treatment = intervention,
+    rand_prob = 0.6,
+    moderator_formula = ~1,
+    control_formula = ~ logstep_pre30min + logstep_30min_lag1 + is_at_home_or_work,
+    availability = avail
+)
+summary(fit2)
+```
+
+One can ask `summary()` to print out the fitted coefficients for the control variables as well, by setting `show_control_fit = TRUE`. This is illustrated by the following code. However, we caution against interpreting the fitted coefficients for the control variables, because these coefficients are only interpretable when the control model is correctly specified, which can rarely be true in an MRT setting.
+
+```{r}
+summary(fit2, show_control_fit = TRUE)
+```
+
+
+## Moderated Causal Excursion Effect
+
+The following code uses `wcls()` to estimate the causal excursion effect moderated by the location of the individual, `is_at_home_or_work`. This is achieved by setting `moderator_formula = ~is_at_home_or_work`.
+
+```{r}
+fit3 <- wcls(
+    data = data_mimicHeartSteps,
+    id = userid,
+    outcome = logstep_30min,
+    treatment = intervention,
+    rand_prob = 0.6,
+    moderator_formula = ~is_at_home_or_work,
+    control_formula = ~ logstep_pre30min + logstep_30min_lag1 + is_at_home_or_work,
+    availability = avail
+)
+summary(fit3)
+```
+
+The moderated causal excursion effect is modeled as a linear form: $\beta_0 + \beta_1 \cdot \text{is_at_home_or_work}$. The output `$causal_excursion_effect` contains two rows, one for $\beta_0$ (with row name `(Intercept)`) and the other for $\beta_1$ (with row name `is_at_home_or_work`). Here, $\beta_0$ is the causal excursion effect when the individual is not at home or work (estimate = 0.109, 95% CI = (-0.029, 0.247), p = 0.117), and $\beta_1$ is the difference in the causal excursion effects between when at home or work and when at other locations (estimate = 0.135, 95% CI = (-0.166, 0.435), p = 0.368).
+
+One can also ask `summary()` to calculate and print the estimated coefficients for $\beta_0 + \beta_1$, the causal excursion effect when the individual is at home or work, by using the `lincomb` optional argument. This is illustrated by the following code. We set `lincomb = c(1, 1)`, i.e., asks `summary()` to print out $[1, 1] \times (\beta_0, \beta_1)^T = \beta_0 + \beta_1$. The third row in `$causal_excursion_effect`, named `(Intercept) + is_at_home_or_work`, is the fitted result for this $\beta_0 + \beta_1$ coefficient combination.
+
+```{r}
+summary(fit3, lincomb = c(1, 1))
+```
+
+Based on the output, the causal excursion effect at home or work is estimated to be 0.244, with 95% CI (0.085, 0.403) and p-value 0.002.
+
+# Causal Excursion Effect Estimation for MRT with Binary Outcomes
+
+The syntax of `emee()` is exactly the same as `wcls()`. We illustrate the use of `emee()` below for completeness.
+
+## Fully Marginal Causal Excursion Effect
+
+The following code uses `emee()` to estimate the fully marginal causal excursion effect from a synthetic data set `data_binary`. This data set contains observations for 100 individuals at 30 different time points. The data set contains the following variables:
+
++ `userid`: id number of an individual.
++ `time`: index of decision point.
++ `time_var1`: time-varying covariate 1 for illustration purpose. Here it is defined as the "standardized time in study", defined as the current decision point index divided by the total number of decision points.
++ `time_var2`: time-varying covariate 2 for illustration purpose. Here it is the indicator of "the second half of the study", defined as whether the current decision point index is greater than the total number of decision points divided by 2.
++ `Y`: the binary proximal outcome.
++ `A`: whether the intervention is randomized to be delivered (=1) or not (=0) at the current decision point;
++ `rand_prob`: the randomization probability at each decision point, which is not a constant over time.
++ `avail`: whether the individual is available (=1) or not (=0) at the current decision point.
+ 
+A summary of `data_binary` is as follows:
+
+```{r}
+head(data_binary, 30)
+```
+ 
+In the following function call of `emee()`, we specify the proximal outcome variable by `outcome = Y`. We specify the treatment variable by `treatment = A`. We specify the randomization probability by `rand_prob = rand_prob` (the first `rand_prob` is an argument of `emee()`; the second `rand_prob` is a column in `data_binary`). We specify the fully marginal effect as the quantity to be estimated by setting `moderator_formula = ~1`. We use `time_var1` and `time_var2` as control variables by setting `control_formula = ~ time_var1 + time_var2`. We specify the availability variable by `availability = avail`.
+
+```{r}
+fit4 <- emee(
+    data = data_binary,
+    id = userid,
+    outcome = Y,
+    treatment = A,
+    rand_prob = rand_prob,
+    moderator_formula = ~1,
+    control_formula = ~ time_var1 + time_var2,
+    availability = avail
+)
+summary(fit4)
+```
+
+The `summary()` function provides the estimated causal excursion effect as well as the 95% confidence interval, standard error, and p-value. The only row in the output `$causal_excursion_effect` is named `(Intercept)`, indicating that this is the fully marginal effect (like an intercept in the causal effect model). In particular, the estimated marginal excursion effect is 0.341 (on the log relative risk scale), with 95% confidence interval (0.241, 0.44), and p-value$<0.001$.
+
+One can ask `summary()` to print out the fitted coefficients for the control variables as well, by setting `show_control_fit = TRUE`. This is illustrated by the following code. However, we caution against interpreting the fitted coefficients for the control variables, because these coefficients are only interpretable when the control model is correctly specified, which can rarely be true in an MRT setting.
+
+```{r}
+summary(fit4, show_control_fit = TRUE)
+```
+
+
+## Moderated Causal Excursion Effect
+
+The following code uses `emee()` to estimate the causal excursion effect moderated by `time_var1`. This is achieved by setting `moderator_formula = ~time_var1`.
+
+```{r}
+fit5 <- emee(
+    data = data_binary,
+    id = userid,
+    outcome = Y,
+    treatment = A,
+    rand_prob = rand_prob,
+    moderator_formula = ~time_var1,
+    control_formula = ~ time_var1 + time_var2,
+    availability = avail
+)
+summary(fit5)
+```
+
+The moderated causal excursion effect is modeled as a linear form: $\beta_0 + \beta_1 \cdot \text{time_var1}$. The output `$causal_excursion_effect` contains two rows, one for $\beta_0$ (with row name `(Intercept)`) and the other for $\beta_1$ (with row name `time_var1`). Here, $\beta_0$ is the causal excursion effect when `time_var1`$=0$ (estimate = 0.081, 95% CI = (-0.180, 0.342), p = 0.54), and $\beta_1$ is the slope of `time_var1` in the causal excursion effect model (estimate = 0.429, 95% CI = (0.051, 0.808), p = 0.03).
+
+One can also ask `summary()` to calculate and print the linear combination of coefficients and their confidence interval, standard error, and p-value, by using the `lincomb` optional argument. The following code sets `lincomb = rbind(c(1, 0.0333), c(1, 0.5), c(1, 1))`, i.e., asks `summary()` to print out the estimates for
+$$
+\begin{bmatrix}1 & 0.0333\\
+1 & 0.5\\
+1 & 1
+\end{bmatrix}\times\begin{bmatrix}\beta_{0}\\
+\beta_{1}
+\end{bmatrix}=\begin{bmatrix}\beta_{0}+0.0333\beta_{1}\\
+\beta_{0}+0.5\beta_{1}\\
+\beta_{0}+\beta_{1}
+\end{bmatrix}.
+$$
+Because $\beta_1$ is the slope of `time_var1`, which is a scaled version of decision time index that starts at 0.0333 and ends at 1, $\beta_0 + 0.0333\beta_1$, $\beta_0 + 0.5\beta_1$ and $\beta_0 + \beta_1$ are the causal excursion effects at the beginning of the study, mid-way during the study, and at the end of the study, respectively. The 3rd to 5th rows in `$causal_excursion_effect` show these results. Note that the interpretation is under the assumption that the causal excursion effect changes linearly over time.
+
+```{r}
+summary(fit5, lincomb = rbind(c(1, 0.0333), c(1, 0.5), c(1, 1)))
+```
+
+```{r}
+options(current_options) # restore old options
+```
+# Bibliography
+
+Below are some references:
+
+- A review of MRT design, the causal excursion effect for continuous outcome, and the weighted and centered least squares (WCLS) method: @qian2022microrandomized
+- The original statistical paper on MRT with continuous outcome, which proposed the causal excursion effect and the WCLS  method: @boruvka2018assessing
+- The original statistical paper on MRT with binary outcome, which proposed the causal excursion effect for binary outcome and the estimator for marginal excursion effect (EMEE) method: @qian2021estimating
+
+# Reference
