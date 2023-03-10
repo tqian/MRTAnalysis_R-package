@@ -31,14 +31,15 @@ MRT is an experimental design for optimizing mobile health interventions. The ma
 
 # Data Structure of an MRT
 
-In an MRT, each participant is repeatedly randomized among treatment options many times throughout the trial. Suppose there are $n$ participants, and for the $i$-th participant, they are enrolled in the trial for $m_i$ decision points. (In many MRT, the number of decision points $m_i$ is the same for all participants. This package also handles the setting where $m_i$ is different for different participants, so we present the data structure in a more general way.)
+In an MRT, each participant is repeatedly randomized among treatment options many times throughout the trial. Suppose there are $n$ participants, and for the $i$-th participant, they are enrolled in the trial for $m_i$ decision points. (In many MRT, the number of decision points $m_i$ is the same for all participants. This package also automatically handles the setting where $m_i$ is different for different participants, so we present the data structure in a more general way.)
 
-For the $i$-th participant at the $t$-th decision point, we use the triplet $(X_{it}, A_{it}, Y_{i,t+1})$ to denote the data collected, where
+For the $i$-th participant at the $t$-th decision point, we use the triplet $(X_{it}, A_{it}, Y_{it})$ to denote the data collected, where
 
 - $X_{it}$ denotes the (vector of) time-varying covariates.
 - $A_{it}$ denotes the binary treatment assignment; $A_{it} = 1$ if randomized to intervention, $A_{it} = 0$ if randomized to no intervention.
   - $A_{it}$ is randomized with success probability $p_{it}$. For many MRTs the $p_{it}$ is a constant throughout the trial for all participants (e.g., $p_{it} = 0.6$), but for some MRTs $p_{it}$ may depend on the past observations of the participant and thus is different for different $(i,t)$ combinations. This packages handles both situations.
-- $Y_{i,t+1}$ denotes the proximal outcome (continuous or binary). The time subscript is $t+1$ to emphasize the fact that $Y_{i,t+1}$ is measured after $A_{it}$.
+- $Y_{it}$ denotes the proximal outcome (continuous or binary) following $A_{it}$.
+  - In some literature, the proximal outcome following $A_{it}$ is written as $Y_{i,t+1}$. We use $Y_{it}$ here because this aligns with the `data.frame` input: each row in the `data.frame` would correspond to $(X_{it}, A_{it}, Y_{it})$ (and possibly other variables --- see below) for a specific $(i,t)$ combination.
 
 
 ## Availability
@@ -50,7 +51,7 @@ Mathematically, we use $I_{it}$ denotes the availability status of participant $
 
 # Prepare Your Data Set for Analysis
 
-To use any of the estimators in this package, you need to prepare your data set as a `data.frame` in long format, meaning that each row records observations from a decision point of a participant. The `data.frame` should be sorted so that consecutive rows should be from adjacent decision points from the same participant. Furthermore, the data set should contain the following columns:
+To use any of the estimators in this package, you need to prepare your data set as a `data.frame` in long format, meaning that each row records observations from a decision point of a participant (i.e., $(X_{it}, A_{it}, Y_{it})$ (and possibly other variables --- see below) for a specific $(i,t)$ combination). The `data.frame` should be sorted so that consecutive rows should be from adjacent decision points from the same participant. Furthermore, the data set should contain the following columns:
 
 - A user id column that distinguishes different participants.
 - An outcome column that contains the proximal outcome.
