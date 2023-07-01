@@ -21,15 +21,15 @@
 #' @import stats
 #' @export
 #' @examples fit <- emee(
-#'     outcome = Y,
-#'     treatment = A,
+#'     data = data_binary,
+#'     id = "userid",
+#'     outcome = "Y",
+#'     treatment = "A",
+#'     rand_prob = "rand_prob",
 #'     moderator_formula = ~time_var1,
 #'     control_formula = ~ time_var1 + time_var2,
-#'     availability = avail,
-#'     rand_prob = rand_prob,
+#'     availability = "avail",
 #'     numerator_prob = 0.5,
-#'     data = data_binary,
-#'     id = userid,
 #'     start = NULL
 #' )
 #' summary(fit)

@@ -52,15 +52,15 @@ test_that(
     {
         expect_equal(
             as.numeric(emee2(
-                outcome = Y,
-                treatment = A,
+                data = data_binary,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
+                rand_prob = "rand_prob",
                 moderator_formula = ~time_var1,
                 control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
+                availability = "avail",
                 numerator_prob = 0.5,
-                data = data_binary,
-                id = userid,
                 start = NULL,
                 verbose = FALSE
             )$fit$beta_hat),
@@ -75,15 +75,15 @@ test_that(
     {
         expect_equal(
             as.numeric(emee2(
-                outcome = Y,
-                treatment = A,
-                moderator_formula = ~time_var1,
-                control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
-                numerator_prob = 0.5,
                 data = data_binary,
-                id = userid,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
+                rand_prob = "rand_prob",
+                moderator_formula = ~ time_var1,
+                control_formula = ~ time_var1 + time_var2,
+                availability = "avail",
+                numerator_prob = 0.5,
                 start = NULL,
                 verbose = FALSE
             )$fit$alpha_hat),
@@ -98,15 +98,15 @@ test_that(
     {
         expect_equal(
             as.numeric(emee2(
-                outcome = Y,
-                treatment = A,
-                moderator_formula = ~time_var1,
-                control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
-                numerator_prob = 0.5,
                 data = data_binary,
-                id = userid,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
+                rand_prob = "rand_prob",
+                moderator_formula = ~ time_var1,
+                control_formula = ~ time_var1 + time_var2,
+                availability = "avail",
+                numerator_prob = 0.5,
                 start = NULL,
                 verbose = FALSE
             )$fit$beta_se),
@@ -121,15 +121,15 @@ test_that(
     {
         expect_equal(
             as.numeric(emee2(
-                outcome = Y,
-                treatment = A,
-                moderator_formula = ~time_var1,
-                control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
-                numerator_prob = 0.5,
                 data = data_binary,
-                id = userid,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
+                rand_prob = "rand_prob",
+                moderator_formula = ~ time_var1,
+                control_formula = ~ time_var1 + time_var2,
+                availability = "avail",
+                numerator_prob = 0.5,
                 start = NULL,
                 verbose = FALSE
             )$fit$alpha_se),
@@ -144,15 +144,15 @@ test_that(
     {
         expect_equal(
             as.numeric(emee2(
-                outcome = Y,
-                treatment = A,
-                moderator_formula = ~time_var1,
-                control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
-                numerator_prob = 0.5,
                 data = data_binary,
-                id = userid,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
+                moderator_formula = ~ time_var1,
+                control_formula = ~ time_var1 + time_var2,
+                availability = "avail",
+                rand_prob = "rand_prob",
+                numerator_prob = 0.5,
                 start = NULL,
                 verbose = FALSE
             )$fit$beta_se_adjusted),
@@ -167,15 +167,15 @@ test_that(
     {
         expect_equal(
             as.numeric(emee2(
-                outcome = Y,
-                treatment = A,
+                data = data_binary,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
                 moderator_formula = ~time_var1,
                 control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
+                availability = "avail",
+                rand_prob = "rand_prob",
                 numerator_prob = 0.5,
-                data = data_binary,
-                id = userid,
                 start = NULL,
                 verbose = FALSE
             )$fit$alpha_se_adjusted),
@@ -190,15 +190,15 @@ test_that(
     {
         expect_equal(
             emee2(
-                outcome = Y,
-                treatment = A,
+                data = data_binary,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
                 moderator_formula = ~time_var1,
                 control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
+                availability = "avail",
+                rand_prob = "rand_prob",
                 numerator_prob = 0.5,
-                data = data_binary,
-                id = userid,
                 start = NULL,
                 verbose = FALSE
             )$fit$varcov,
@@ -222,15 +222,15 @@ test_that(
     {
         expect_equal(
             emee2(
-                outcome = Y,
-                treatment = A,
+                data = data_binary,
+                id = "userid",
+                outcome = "Y",
+                treatment = "A",
                 moderator_formula = ~time_var1,
                 control_formula = ~ time_var1 + time_var2,
-                availability = avail,
-                rand_prob = rand_prob,
+                availability = "avail",
+                rand_prob = "rand_prob",
                 numerator_prob = 0.5,
-                data = data_binary,
-                id = userid,
                 start = NULL,
                 verbose = FALSE
             )$fit$varcov_adjusted,
@@ -252,15 +252,15 @@ test_that(
 # extract the confidence interval from the output and drop its column and row names
 
 conf_int <- emee2(
-    outcome = Y,
-    treatment = A,
+    data = data_binary,
+    id = "userid",
+    outcome = "Y",
+    treatment = "A",
     moderator_formula = ~time_var1,
     control_formula = ~ time_var1 + time_var2,
-    availability = avail,
-    rand_prob = rand_prob,
+    availability = "avail",
+    rand_prob = "rand_prob",
     numerator_prob = 0.5,
-    data = data_binary,
-    id = userid,
     start = NULL,
     verbose = FALSE
 )$fit$conf_int
@@ -281,15 +281,15 @@ test_that(
 # extract the adjusted confidence interval from the output and drop its column and row names
 
 conf_int_adjusted <- emee2(
-    outcome = Y,
-    treatment = A,
+    data = data_binary,
+    id = "userid",
+    outcome = "Y",
+    treatment = "A",
+    rand_prob = "rand_prob",
     moderator_formula = ~time_var1,
     control_formula = ~ time_var1 + time_var2,
-    availability = avail,
-    rand_prob = rand_prob,
+    availability = "avail",
     numerator_prob = 0.5,
-    data = data_binary,
-    id = userid,
     start = NULL,
     verbose = FALSE
 )$fit$conf_int_adjusted
@@ -322,7 +322,7 @@ test_that(
 #                 data = data_binary,
 #                 id = userid,
 #                 start = NULL,
-verbose <- FALSE
+#                 verbose = FALSE
 #             ),
 #             "It seems like you included variables to left of ~. moderator_formula should look like ~1 or ~ mod_var1 + mod_var2."
 #         )

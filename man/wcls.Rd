@@ -51,18 +51,17 @@ An object of type "wcls_fit"
 \description{
 Returns the estimated causal excursion effect (on additive scale) and the estimated standard error.
 Small sample correction using the "Hat" matrix in the variance estimate is implemented.
-All variables should correspond to columns in data and should not be in quotation marks.
 }
 \examples{
 wcls(
     data = data_mimicHeartSteps,
-    id = userid,
-    outcome = logstep_30min,
-    treatment = intervention,
+    id = "userid",
+    outcome = "logstep_30min",
+    treatment = "intervention",
     rand_prob = 0.6,
     moderator_formula = ~1,
     control_formula = ~logstep_pre30min,
-    availability = avail,
+    availability = "avail",
     numerator_prob = 0.6
 )
 }

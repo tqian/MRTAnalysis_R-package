@@ -1,7 +1,7 @@
 Package: MRTAnalysis
 Type: Package
 Title: Primary and Secondary Analyses for Micro-Randomized Trials
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(
     person("Tianchen", "Qian", , "t.qian@uci.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4282-7826")),

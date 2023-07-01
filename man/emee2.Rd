@@ -58,7 +58,6 @@ An object of type "emee_fit"
 \description{
 Returns the estimated causal excursion effect (on log relative risk scale) and the estimated standard error.
 Small sample correction using the "Hat" matrix in the variance estimate is implemented.
-All variables should correspond to columns in data and should not be in quotation marks.
 This is a slightly altered version of \code{emee()}, where the treatment
 assignment indicator is also centered in the residual term. It would have
 similar (but not exactly the same) numerical output as \code{emee()}. This
@@ -69,26 +68,26 @@ MRT is developed. (See R package \code{MRTSampleSizeBinary}.)
 ## estimating the fully marginal excursion effect by setting
 ## moderator_formula = ~ 1
 emee2(
-    outcome = Y,
-    treatment = A,
+    data = data_binary,
+    id = "userid",
+    outcome = "Y",
+    treatment = "A",
+    rand_prob = "rand_prob",
     moderator_formula = ~1,
     control_formula = ~ time_var1 + time_var2,
-    availability = avail,
-    rand_prob = rand_prob,
-    data = data_binary,
-    id = userid
+    availability = "avail"
 )
 
 ## estimating the causal excursion effect moderated by time_var1
 ## by setting moderator_formula = ~ time_var1
 emee2(
-    outcome = Y,
-    treatment = A,
+    data = data_binary,
+    id = "userid",
+    outcome = "Y",
+    treatment = "A",
+    rand_prob = "rand_prob",
     moderator_formula = ~time_var1,
     control_formula = ~ time_var1 + time_var2,
-    availability = avail,
-    rand_prob = rand_prob,
-    data = data_binary,
-    id = userid
+    availability = "avail"
 )
 }

@@ -52,14 +52,14 @@ test_that(
     {
         expect_equal(
             as.numeric(wcls(
-                outcome = logstep_30min,
-                treatment = intervention,
+                data = data_mimicHeartSteps,
+                id = "userid",
+                outcome = "logstep_30min",
+                treatment = "intervention",
+                rand_prob = 0.6,
                 moderator_formula = ~1,
                 control_formula = ~logstep_pre30min,
-                availability = avail,
-                rand_prob = 0.6,
-                data = data_mimicHeartSteps,
-                id = userid,
+                availability = "avail",
                 numerator_prob = 0.6,
                 verbose = FALSE
             )$coefficients),

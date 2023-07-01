@@ -2,7 +2,6 @@
 #'
 #' Returns the estimated causal excursion effect (on additive scale) and the estimated standard error.
 #' Small sample correction using the "Hat" matrix in the variance estimate is implemented.
-#' All variables should correspond to columns in data and should not be in quotation marks.
 #'
 #' @param data A data set in long format.
 #' @param id The subject id variable.
@@ -29,13 +28,13 @@
 #'
 #' @examples wcls(
 #'     data = data_mimicHeartSteps,
-#'     id = userid,
-#'     outcome = logstep_30min,
-#'     treatment = intervention,
+#'     id = "userid",
+#'     outcome = "logstep_30min",
+#'     treatment = "intervention",
 #'     rand_prob = 0.6,
 #'     moderator_formula = ~1,
 #'     control_formula = ~logstep_pre30min,
-#'     availability = avail,
+#'     availability = "avail",
 #'     numerator_prob = 0.6
 #' )
 wcls <- function(data,
@@ -64,6 +63,7 @@ wcls <- function(data,
     control_matrix <- preprocessed_input$control_matrix
     availability <- preprocessed_input$availability
     numerator_prob <- preprocessed_input$numerator_prob
+    numerator_prob_in_formula <- preprocessed_input$numerator_prob_in_formula
 
     # model fitting
 
@@ -74,7 +74,7 @@ wcls <- function(data,
     moderator_formula_no_tilde <- as.character(mf$moderator_formula)[2]
     RHS_formula <- paste(
         "~", control_formula_no_tilde, "+",
-        "I(", as.character(mf$treatment), "-", as.character(mf$rand_prob), ")",
+        "I(", mf$treatment, "-", numerator_prob_in_formula, ")",
         "*", "(", moderator_formula_no_tilde, ")"
     )
 

@@ -18,9 +18,14 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
     }
 
     # creating id, outcome, treatment
-    id <- data[, as.character(mf$id)]
-    outcome <- as.numeric(data[, as.character(mf$outcome)])
-    treatment <- as.numeric(data[, as.character(mf$treatment)])
+    stopifnot(class(mf$id) == "character")
+    id <- data[[mf$id]]
+
+    stopifnot(class(mf$outcome) == "character")
+    outcome <- data[[mf$outcome]]
+
+    stopifnot(class(mf$treatment) == "character")
+    treatment <- data[[mf$treatment]]
 
     # creating availability
     if (is.null(mf$availability)) {
@@ -29,7 +34,7 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
             message("availability = NULL: defaulting availability to always available.")
         }
     } else {
-        availability <- as.numeric(data[, as.character(mf$availability)])
+        availability <- data[[mf$availability]]
     }
 
     # creating rand_prob (randomization probability)
@@ -39,8 +44,13 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
         if (verbose) {
             message(paste0("Constant randomization probability ", mf$rand_prob, " is used."))
         }
+    } else if (is.character(mf$rand_prob)) {
+        rand_prob <- data[[mf$rand_prob]]
     } else {
-        rand_prob <- as.numeric(data[, as.character(mf$rand_prob)])
+        stop(paste(
+            "rand_prob should be either a single numeric value or a character",
+            "denoting a column in data."
+        ))
     }
 
     # creating and checking moderator variables
@@ -50,9 +60,15 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
         # the formula looks like "~x"
     } else if (length(parse.fm_mdr) == 3) {
         # the formula looks like "y ~ x"
-        stop("It seems like you included variables to left of ~. moderator_formula should look like ~1 or ~ mod_var1 + mod_var2.")
+        stop(paste(
+            "It seems like you included variables to left of ~.",
+            "moderator_formula should look like ~1 or ~ mod_var1 + mod_var2."
+        ))
     } else {
-        stop("Unknown moderator_formula pattern! moderator_formula should look like ~1 or ~ mod_var1 + mod_var2.")
+        stop(paste(
+            "Unknown moderator_formula pattern!",
+            "moderator_formula should look like ~1 or ~ mod_var1 + mod_var2."
+        ))
     }
     moderator_matrix <- model.matrix(as.formula(mf$moderator_formula), data = data)
 
@@ -63,38 +79,46 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
         # the formula looks like "~x"
     } else if (length(parse.fm_ctl) == 3) {
         # the formula looks like "y ~ x"
-        stop("It seems like you included variables to left of ~. control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2.")
+        stop(paste("It seems like you included variables to left of ~.",
+        "control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2."))
     } else {
-        stop("Unknown control_formula pattern! control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2.")
+        stop(paste("Unknown control_formula pattern!",
+        "control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2."))
     }
     control_matrix <- model.matrix(as.formula(mf$control_formula), data = data)
 
     # creating and checking numerator_prob (numerator probability)
     if (is.null(mf$numerator_prob)) {
-        if (is.numeric(mf$rand_prob)) {
-            numerator_prob <- rep(mf$rand_prob, nrow(data))
-        } else if (length(unique(rand_prob)) == 1) {
-            numerator_prob <- rep(rand_prob[1], nrow(data))
-        } else {
-            numerator_prob <- rep(0.5, nrow(data))
+        numerator_prob <- rep(0.5, nrow(data))
+        numerator_prob_in_formula <- 0.5
+        if (verbose) {
+            message(paste0("Constant numerator probability ", numerator_prob_in_formula, " is used."))
         }
     } else if (is.numeric(mf$numerator_prob)) {
+        stopifnot(length(mf$numerator_prob) == 1)
         numerator_prob <- rep(mf$numerator_prob, nrow(data))
+        numerator_prob_in_formula <- mf$numerator_prob
         if (verbose) {
-            message(paste0("Constant numerator probability ", mf$numerator_prob, " is used."))
+            message(paste0("Constant numerator probability ", numerator_prob_in_formula, " is used."))
         }
-    } else {
-        numerator_prob <- as.numeric(data[, as.character(mf$numerator_prob)])
+    } else if (is.character(mf$numerator_prob)) {
+        numerator_prob <- data[[mf$numerator_prob]]
+        numerator_prob_in_formula <- mf$numerator_prob
         if (length(unique(numerator_prob)) > 1) {
             if (verbose) {
-                message(paste0(
-                    "Non-constant numerator probability is used. ",
-                    "Make sure you know how to appropriately choose a non-constant numerator probability ",
-                    "(that it can only depend on the moderators). ",
+                message(paste(
+                    "Non-constant numerator probability is used.",
+                    "Make sure you know how to appropriately choose a non-constant numerator probability",
+                    "(that it can only depend on the moderators).",
                     "Otherwise the estimated causal effect can be biased."
                 ))
             }
         }
+    } else {
+        stop(paste("numerator_prob type mismatch.",
+                   "numerator_prob must be either NULL,",
+                   "or a single numeric number,",
+                   "or a character denoting a column in data."))
     }
 
     # checking variable types
@@ -160,6 +184,8 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
         moderator_matrix = moderator_matrix,
         control_matrix = control_matrix,
         availability = availability,
-        numerator_prob = numerator_prob
+        numerator_prob = numerator_prob,
+        numerator_prob_in_formula = numerator_prob_in_formula
+        # numerator_prob_in_formula is used in wcls()
     )
 }
