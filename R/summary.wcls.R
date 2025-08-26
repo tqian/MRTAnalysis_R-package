@@ -157,7 +157,7 @@ summary.wcls_fit <- function(
             function(q) 1 - mapply(pf, q = q, df1 = d1, df2 = d2)
         }
     }
-    var.est <- combos %*% vcov(object, small = small) %*% t(combos)
+    var.est <- combos %*% vcov_geeglm(object, small = small) %*% t(combos)
     se.est <- sqrt(diag(var.est))
     crit <- sqrt(qfun(conf.int))
     lcl <- est - se.est * crit

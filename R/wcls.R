@@ -271,7 +271,7 @@ glm2gee <- function(x, id) {
         vgamma = z, vgamma.ajs = z, vgamma.j1s = z, vgamma.fij = z,
         clusz = as.vector(table(x$id)),
         model = list(scale.fix = TRUE, corstr = x$corstr),
-        call = x$call, X = try(model.matrix(x), silent = TRUE)
+        call = x$call, X = try(model.matrix_geeglm(x), silent = TRUE)
     )
     if (inherits(x$geese$X, "try-error")) x$geese$X <- NULL
     if (inherits(x, "glm")) {
@@ -307,7 +307,7 @@ if (!"package:sandwich" %in% search()) {
 meat.default <- sandwich::meat
 meat <- function(x, ...) UseMethod("meat")
 
-model.matrix.geeglm <- function(x) x$geese$X
+model.matrix_geeglm <- function(x) x$geese$X
 
 ## extract bread from geeglm's sandwich variance estimator
 ## (i.e. the derivative of estimating function wrt regression coefficients)
@@ -323,11 +323,11 @@ bread.geeglm <- function(x, wcovinv = NULL, invert = TRUE, approx = TRUE, ...) {
         function(D, V, r, X, k) t(D) %*% V %*% diag(r, k) %*% X
     }
     b <- mapply(function(D, DD, V, r, X, k) g(DD, V, r, X, k) - t(D) %*% V %*% D,
-        D = split.data.frame(model.matrix(x) * dot.mu(x), x$id),
-        DD = split.data.frame(model.matrix(x) * dot.mu(x, 2), x$id),
+        D = split.data.frame(model.matrix_geeglm(x) * dot.mu(x), x$id),
+        DD = split.data.frame(model.matrix_geeglm(x) * dot.mu(x, 2), x$id),
         V = wcovinv,
         r = split(x$y - x$fitted.values, x$id),
-        X = split.data.frame(model.matrix(x), x$id),
+        X = split.data.frame(model.matrix_geeglm(x), x$id),
         k = cluster.size(x),
         SIMPLIFY = FALSE
     )
@@ -346,7 +346,7 @@ leverage <- function(x, wcovinv = NULL, invert = TRUE) {
         identity
     }
     mapply(function(D, V, k) g(D %*% B %*% t(D) %*% V),
-        D = split.data.frame(model.matrix(x) * dot.mu(x), x$id),
+        D = split.data.frame(model.matrix_geeglm(x) * dot.mu(x), x$id),
         V = wcovinv,
         SIMPLIFY = FALSE
     )
@@ -369,7 +369,7 @@ estfun.geeglm <- function(x, wcovinv = NULL, small = TRUE, res = FALSE, ...) {
         SIMPLIFY = FALSE
     )
     e <- mapply(function(D, V, r) t(D) %*% V %*% r,
-        D = split.data.frame(model.matrix(x) * dot.mu(x), x$id),
+        D = split.data.frame(model.matrix_geeglm(x) * dot.mu(x), x$id),
         V = wcovinv,
         r = r,
         SIMPLIFY = FALSE
@@ -413,7 +413,7 @@ meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
         }
         ## ... (observed) treatment probability wrt its regression model coefficients
         Up.coef <- function(p, one = TRUE) {
-            model.matrix(p) * dot.mu(p) *
+            model.matrix_geeglm(p) * dot.mu(p) *
                 ifelse(p$weights == 0, 0,
                     1 / ifelse(p$y == 1 | one, p$fitted.values, p$fitted.values - 1)
                 )
@@ -432,7 +432,7 @@ meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
             ## keep aligned with observations in 'x'
             obs <- align.obs(x, pd, lag)
             sig <- mapply(Ux.p,
-                D = split.data.frame(model.matrix(x) * dot.mu(x), x$id),
+                D = split.data.frame(model.matrix_geeglm(x) * dot.mu(x), x$id),
                 V = wcovinv,
                 r = split(res, x$id),
                 k = cluster.size(x),
@@ -451,7 +451,7 @@ meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
             k <- which.terms(x, label)
             obs <- align.obs(x, pn, lag)
             sig1 <- mapply(Ux.p,
-                D = split.data.frame(model.matrix(x) * dot.mu(x), x$id),
+                D = split.data.frame(model.matrix_geeglm(x) * dot.mu(x), x$id),
                 V = wcovinv,
                 r = split(res, x$id),
                 k = cluster.size(x),
@@ -461,7 +461,7 @@ meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
             )
             sig1 <- Reduce("+", sig1)
             ## design matrix component in second term of partial derivative is...
-            mm2 <- model.matrix(x)
+            mm2 <- model.matrix_geeglm(x)
             ## ... zero in columns for main effect
             mm2[, -k] <- 0
             ## ... scaled by negative probability in columns for treatment effect
@@ -482,7 +482,7 @@ meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
             ## residual component in third term reduces to probability factor
             resid3 <- as.vector(-mm2[, k, drop = FALSE] %*% coef(x)[k])
             sig3 <- mapply(Ux.p,
-                D = split.data.frame(model.matrix(x) * dot.mu(x), x$id),
+                D = split.data.frame(model.matrix_geeglm(x) * dot.mu(x), x$id),
                 V = wcovinv,
                 r = split(resid3, x$id),
                 k = cluster.size(x),
@@ -570,7 +570,7 @@ working.correlation <- function(x, ...) {
 
 ## calculate the sandwich estimator of the covariance matrix for the regression
 ## coefficients
-vcov.geeglm <- function(x, ...) {
+vcov_geeglm <- function(x, ...) {
     x <- gee.scalars(x)
     v <- x$vcov
     if (is.null(v)) {
@@ -624,7 +624,7 @@ estimate <- function(x, combos = NULL, omnibus = FALSE, null = 0,
             function(q) 1 - mapply(pf, q = q, df1 = d1, df2 = d2)
         }
     }
-    var.est <- combos %*% vcov(x, small = small, ...) %*% t(combos)
+    var.est <- combos %*% vcov_geeglm(x, small = small, ...) %*% t(combos)
     se.est <- sqrt(diag(var.est))
     crit <- sqrt(qfun(conf.int))
     lcl <- est - se.est * crit
