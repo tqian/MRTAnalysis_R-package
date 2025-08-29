@@ -1,0 +1,170 @@
+---
+title: "Exploratory Analysis for Micro-Randomized Trial (MRT): Continuous Distal Outcomes"
+author: "Tianchen Qian (t.qian@uci.edu)"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+link-citations: yes
+bibliography: mhealth-ref.bib
+csl: biostatistics.csl
+vignette: >
+  %\VignetteIndexEntry{Exploratory Analysis for Micro-Randomized Trial (MRT): Continuous Distal Outcomes}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+    collapse = TRUE,
+    comment = "#>"
+)
+```
+
+# Introduction
+
+The `MRTAnalysis` package now supports analysis of distal causal excursion effect of a continuous **distal outcomes** in micro-randomized trials (MRTs), using the function `dcee()`.  
+Distal outcomes are measured once at the end of the study (e.g., weight loss, cognitive score), in contrast to **proximal outcomes** which are repeatedly measured after each treatment decision point.
+
+This vignette introduces:
+
+- The data structure and the distal causal excursion effects (DCEE).  
+- The usage of the `dcee()` function to estimate DCEE for MRT with a continuous distal outcome.
+- Example analyses with synthetic data.  
+- Moderated effects, cross-fitting, and machine learning options.  
+- Interpretation of the results.
+
+# Data Structure of MRT with Distal Outcomes
+
+In a distal-outcome MRT:
+
+- **Treatment assignment**: At each decision point $t$, $A_{it}$ is randomized with probability $p_{it}$.  
+- **Covariates**: $X_{it}$ time-varying covariates and moderators.  
+- **Availability**: $I_{it} = 1$ if available, $0$ otherwise.  
+- **Outcome**: $Y_i$ distal outcome measured once at end of study.  
+
+Thus, each row in the long-format data corresponds to $(X_{it}, A_{it}, I_{it}, p_{it})$, with $Y_i$ constant within each participant.
+
+## Distal Causal Excursion Effects
+
+The distal causal excursion effects are defined using potential outcomes in @qian2025distal.
+Roughly speaking, the DCEE at decision point $t$ is the difference in the outcome $Y_i$ due to assigning treatment $A_{it}=1$ versus $A_{it}=0$ at time $t$, while keeping the past and future treatment assignments according to the randomization probabilities in the MRT (i.e., the MRT policy), and averaging over the covariate history and availability at $t$.
+
+# Example Dataset
+
+This package provides `data_distal_continuous`, a synthetic dataset with:
+
+- `userid`: participant id.  
+- `dp`: decision point index.  
+- `X`: continuous endogenous covariate.  
+- `Z`: binary endogenous covariate.  
+- `avail`: availability indicator.  
+- `A`: treatment indicator.  
+- `prob_A`: randomization probability.  
+- `A_lag1`: lag-1 treatment.
+- `Y`: continuous distal outcome, identical across rows for same `userid`.  
+
+```{r}
+library(MRTAnalysis)
+current_options <- options(digits = 3) # save current options for restoring later
+head(data_distal_continuous, 10)
+```
+
+# Using `dcee()`
+
+## Fully Marginal Effect (no moderators)
+
+In the following function call of `dcee()`, we specify the distal outcome variable by `outcome = "Y"`. We specify the treatment variable by `treatment = "A"`. We specify the time-varying randomization probability by `rand_prob = "prob_A"`. We specify the fully marginal effect as the quantity to be estimated by setting `moderator_formula = ~1`. We use `X` and `Z` as two variables by setting `control_formula = ~logstep_pre30min`. We specify the availability variable by `availability = avail`. We use linear regression for the control regression model (i.e., the Stage-1 nuisance models in the two-stage estimation procedure in @qian2025distal) by setting `control_reg_method = "lm"`.
+
+Note that the estimator for the distal causal excursion effect is consistent even if the control regression model is mis-specified, as long as the treatment randomization probabilities are correctly specified (which will be the case for MRTs). Different control regression methods can be used to improve efficiency.
+
+
+```{r}
+fit_lm <- dcee(
+    data = data_distal_continuous,
+    id = "userid", outcome = "Y", treatment = "A", rand_prob = "prob_A",
+    moderator_formula = ~1,
+    control_formula = ~ X + Z,
+    availability = "avail",
+    control_reg_method = "lm"
+)
+summary(fit_lm)
+```
+
+The `summary()` function provides the estimated distal causal excursion effect as well as the 95% confidence interval, standard error, and p-value. The only row in the output `Distal causal excursion effect (beta)` is named `Intercept`, indicating that this is the fully marginal effect (like an intercept in the causal effect model). In particular, the estimated marginal distal excursion effect is 0.404, with 95% confidence interval (-0.771, 1.579), and p-value 0.49. The confidence interval and the p-value are based on t-quantiles.
+
+## Moderated Effect
+
+The following code uses `dcee()` to estimate the distal causal excursion effect moderated by the time-varying covariate `Z`. This is achieved by setting `moderator_formula = ~ Z`.
+
+```{r}
+fit_mod <- dcee(
+    data = data_distal_continuous,
+    id = "userid", outcome = "Y", treatment = "A", rand_prob = "prob_A",
+    moderator_formula = ~Z,
+    control_formula = ~ Z + X,
+    availability = "avail",
+    control_reg_method = "lm"
+)
+summary(fit_mod, lincomb = c(1, 1)) # beta0 + beta1
+```
+In the above, we asked `summary()` to calculate and print the estimated coefficients for $\beta_0 + \beta_1$, the distal causal excursion effect when the binary variable $Z$ takes value 1, by using the `lincomb` optional argument. This is illustrated by the following code. We set `lincomb = c(1, 1)`, i.e., asks `summary()` to print out $[1, 1] \times (\beta_0, \beta_1)^T = \beta_0 + \beta_1$. The table under `Linear combinations (L * beta)` is the fitted result for this $\beta_0 + \beta_1$ coefficient combination.
+
+## GAM nuisance models
+
+One can use generalized additive models (GAM) for the control regression models by setting `control_reg_method = "gam"`. This may improve efficiency if the relationship between the distal outcome and the covariates is non-linear. One can use `s()` to specify non-linear terms in the `control_formula`. For example, here we use a smooth term for the continuous covariate `X`, by setting `control_formula = ~ s(X) + Z`.
+
+
+```{r}
+fit_gam <- dcee(
+    data = data_distal_continuous,
+    id = "userid", outcome = "Y", treatment = "A", rand_prob = "prob_A",
+    moderator_formula = ~Z,
+    control_formula = ~ s(X) + Z,
+    availability = "avail",
+    control_reg_method = "gam"
+)
+summary(fit_gam)
+```
+
+## Random Forest / Ranger nuisance
+
+One can also use tree-based methods for the control regression models by setting `control_reg_method = "rf"` (random forest via `randomForest` package) or `control_reg_method = "ranger"` (faster random forest via `ranger` package). This may improve efficiency if the relationship between the distal outcome and the covariates is complex. Note that tree-based methods do not allow specification of smooth terms like `s(X)`. The `control_formula` has to be specified using main terms only. Additional optional arguments can be passed to the underlying random forest function via `...` argument of `dcee()`, which is not shown in this example.
+
+
+```{r}
+fit_rf <- dcee(
+    data = data_distal_continuous,
+    id = "userid", outcome = "Y", treatment = "A", rand_prob = "prob_A",
+    moderator_formula = ~1,
+    control_formula = ~ X + Z,
+    availability = "avail",
+    control_reg_method = "rf" # can replace "rf" with "ranger" for faster implementation
+)
+summary(fit_rf)
+```
+
+# Cross-Fitting
+
+The `dcee()` function also supports cross-fitting, which may lead to improved finite sample performance when using complex machine learning methods for the control regression models. This is done by setting `cross_fit = TRUE` and specifying the number of folds via `cf_fold`. Here we use 5-fold cross-fitting with generalized additive models for the control regression models as an example. The particular cross-fitting algorithm follows Section 4 in the Web Appendix of @zhong2021aipw.
+
+```{r}
+fit_cf <- dcee(
+    data = data_distal_continuous,
+    id = "userid", outcome = "Y", treatment = "A", rand_prob = "prob_A",
+    moderator_formula = ~1,
+    control_formula = ~ X + Z,
+    availability = "avail",
+    control_reg_method = "gam",
+    cross_fit = TRUE, cf_fold = 5
+)
+summary(fit_cf)
+```
+
+# Inspecting Stage-1 Fits
+
+We can set `show_control_fit = TRUE` in the `summary()` function to inspect the control regression (i.e., Stage-1 nuisance) model fits. This is useful for diagnosing the fit of the control regression models. For `lm`/`gam` these include regression summaries. For tree-based or SuperLearner fits, original learner output is shown. To further inspect the control regression model fits, one can manually inspect `$fit$regfit_a0` and `$fit$regfit_a1`.
+
+```{r}
+summary(fit_lm, show_control_fit = TRUE)
+```
+
+# References
