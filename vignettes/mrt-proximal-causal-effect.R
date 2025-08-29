@@ -1,4 +1,4 @@
-## ---- include = FALSE---------------------------------------------------------
+## ----include = FALSE----------------------------------------------------------
 knitr::opts_chunk$set(
     collapse = TRUE,
     comment = "#>"
@@ -14,26 +14,26 @@ head(data_mimicHeartSteps, 10)
 ## -----------------------------------------------------------------------------
 fit1 <- wcls(
     data = data_mimicHeartSteps,
-    id = userid,
-    outcome = logstep_30min,
-    treatment = intervention,
+    id = "userid",
+    outcome = "logstep_30min",
+    treatment = "intervention",
     rand_prob = 0.6,
     moderator_formula = ~1,
     control_formula = ~logstep_pre30min,
-    availability = avail
+    availability = "avail"
 )
 summary(fit1)
 
 ## -----------------------------------------------------------------------------
 fit2 <- wcls(
     data = data_mimicHeartSteps,
-    id = userid,
-    outcome = logstep_30min,
-    treatment = intervention,
+    id = "userid",
+    outcome = "logstep_30min",
+    treatment = "intervention",
     rand_prob = 0.6,
     moderator_formula = ~1,
     control_formula = ~ logstep_pre30min + logstep_30min_lag1 + is_at_home_or_work,
-    availability = avail
+    availability = "avail"
 )
 summary(fit2)
 
@@ -43,13 +43,13 @@ summary(fit2, show_control_fit = TRUE)
 ## -----------------------------------------------------------------------------
 fit3 <- wcls(
     data = data_mimicHeartSteps,
-    id = userid,
-    outcome = logstep_30min,
-    treatment = intervention,
+    id = "userid",
+    outcome = "logstep_30min",
+    treatment = "intervention",
     rand_prob = 0.6,
     moderator_formula = ~is_at_home_or_work,
     control_formula = ~ logstep_pre30min + logstep_30min_lag1 + is_at_home_or_work,
-    availability = avail
+    availability = "avail"
 )
 summary(fit3)
 
@@ -62,13 +62,13 @@ head(data_binary, 30)
 ## -----------------------------------------------------------------------------
 fit4 <- emee(
     data = data_binary,
-    id = userid,
-    outcome = Y,
-    treatment = A,
-    rand_prob = rand_prob,
+    id = "userid",
+    outcome = "Y",
+    treatment = "A",
+    rand_prob = "rand_prob",
     moderator_formula = ~1,
     control_formula = ~ time_var1 + time_var2,
-    availability = avail
+    availability = "avail"
 )
 summary(fit4)
 
@@ -78,13 +78,13 @@ summary(fit4, show_control_fit = TRUE)
 ## -----------------------------------------------------------------------------
 fit5 <- emee(
     data = data_binary,
-    id = userid,
-    outcome = Y,
-    treatment = A,
-    rand_prob = rand_prob,
+    id = "userid",
+    outcome = "Y",
+    treatment = "A",
+    rand_prob = "rand_prob",
     moderator_formula = ~time_var1,
     control_formula = ~ time_var1 + time_var2,
-    availability = avail
+    availability = "avail"
 )
 summary(fit5)
 

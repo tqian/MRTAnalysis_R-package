@@ -1,5 +1,5 @@
 ---
-title: "Primary and Secondary Analysis for Micro-Randomized Trial (MRT)"
+title: "Primary and Secondary Analysis for Micro-Randomized Trial (MRT): Proximal Outcomes"
 author: "Tianchen Qian (t.qian@uci.edu), Shaolin Xiang, Zhaoxi Cheng"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -7,7 +7,7 @@ link-citations: yes
 bibliography: mhealth-ref.bib
 csl: biostatistics.csl
 vignette: >
-  %\VignetteIndexEntry{Primary and Secondary Analysis for Micro-Randomized Trial (MRT)}
+  %\VignetteIndexEntry{Primary and Secondary Analysis for Micro-Randomized Trial (MRT): Proximal Outcomes}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -21,12 +21,14 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-The `MRTAnalysis` package provides user-friendly functions to conduct primary and secondary analyses for micro-randomized trial (MRT), where the proximal outcomes are continuous or binary and the intervention option is binary. For continuous outcomes, the estimated causal effects are on the additive scale. For binary outcomes, the estimated causal effects are on the log relative risk scale. In particular, this package can be used to
+The `MRTAnalysis` package provides user-friendly functions to conduct primary and secondary analyses for micro-randomized trial (MRT), where the proximal outcomes are continuous or binary and the intervention option is binary. For continuous proximal outcomes, the estimated causal effects are on the additive scale. For binary proximal outcomes, the estimated causal effects are on the log relative risk scale. In particular, this package can be used to
 
-- estimate the marginal causal excursion effect
-- estimate the moderated causal excursion effect, i.e., the effect modification by time-fixed or time-varying covariates.
+- estimate the marginal proximal causal excursion effect
+- estimate the moderated proximal causal excursion effect, i.e., the effect modification by time-fixed or time-varying covariates.
 
-MRT is an experimental design for optimizing mobile health interventions. The marginal and the moderated causal excursion effects are the quantities of interest in primary and secondary analyses for MRT. In this tutorial we briefly review MRT and causal excursion effects, and illustrate the use of the estimators implemented in this package for conducting primary and secondary analyses of MRT: `wcls()` (weighted and centered least squares, for MRT with continuous outcomes) and `emee()` (estimator for marginal excursion effect, for MRT with binary outcome).
+MRT is an experimental design for optimizing mobile health interventions. The marginal and the moderated causal excursion effects are the quantities of interest in primary and secondary analyses for MRT. In this tutorial we briefly review MRT and proximal causal excursion effects, and illustrate the use of the estimators implemented in this package for conducting primary and secondary analyses of MRT: `wcls()` (weighted and centered least squares, for MRT with continuous proximal outcomes) and `emee()` (estimator for marginal excursion effect, for MRT with binary proximal outcomes).
+
+In a separate tutorial, we will introduce the `dcee()` function for estimating the distal causal excursion effect in MRT, i.e., the effect of the time-varying treatments on a distal outcome, measured at the end of the study.
 
 
 # Data Structure of an MRT
@@ -93,7 +95,7 @@ head(data_mimicHeartSteps, 10)
 ```
 
 
-In the following function call of `wcls()`, we specify the proximal outcome variable by `outcome = logstep_30min`. We specify the treatment variable by `treatment = intervention`. We specify the constant randomization probability by `rand_prob = 0.6`. We specify the fully marginal effect as the quantity to be estimated by setting `moderator_formula = ~1`. We use `logstep_pre30min` as a control variable by setting `control_formula = ~logstep_pre30min`. We specify the availability variable by `availability = avail`.
+In the following function call of `wcls()`, we specify the proximal outcome variable by `outcome = "logstep_30min"`. We specify the treatment variable by `treatment = "intervention"`. We specify the constant randomization probability by `rand_prob = 0.6`. We specify the fully marginal effect as the quantity to be estimated by setting `moderator_formula = ~1`. We use `logstep_pre30min` as a control variable by setting `control_formula = ~logstep_pre30min`. We specify the availability variable by `availability = avail`.
 
 ```{r}
 fit1 <- wcls(
