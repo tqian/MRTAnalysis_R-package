@@ -4,7 +4,7 @@
 \name{data_mimicHeartSteps}
 \alias{data_mimicHeartSteps}
 \title{A synthetic data set that mimics the HeartSteps V1 data structure to illustrate
-the use of [wcls()] function for continuous outcomes}
+the use of [wcls()] function for continuous proximal outcomes}
 \format{
 a data frame with 7770 observations and 9 variables
 \describe{
@@ -25,6 +25,6 @@ data_mimicHeartSteps
 }
 \description{
 A synthetic data set that mimics the HeartSteps V1 data structure to illustrate
-the use of [wcls()] function for continuous outcomes
+the use of [wcls()] function for continuous proximal outcomes
 }
 \keyword{datasets}
