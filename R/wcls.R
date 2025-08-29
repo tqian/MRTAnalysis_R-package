@@ -300,12 +300,13 @@ cluster.number <- function(x, overall = TRUE) {
     }
 }
 
-if (!"package:sandwich" %in% search()) {
-    bread <- function(x, ...) UseMethod("bread")
-    estfun <- function(x, ...) UseMethod("estfun")
-}
-meat.default <- sandwich::meat
-meat <- function(x, ...) UseMethod("meat")
+### TQ commented out the following on 2025.08.28 to avoid namespace issues
+# if (!"package:sandwich" %in% search()) {
+#     bread <- function(x, ...) UseMethod("bread")
+#     estfun <- function(x, ...) UseMethod("estfun")
+# }
+# meat.default <- sandwich::meat
+# meat <- function(x, ...) UseMethod("meat")
 
 model.matrix_geeglm <- function(x) x$geese$X
 
@@ -314,7 +315,7 @@ model.matrix_geeglm <- function(x) x$geese$X
 ## nb: under the non-identity link, the asymptotic approximation (last line in
 ##     the Appendix of Liang and Zeger, 1986), is valid when the model is
 ##     correctly specified
-bread.geeglm <- function(x, wcovinv = NULL, invert = TRUE, approx = TRUE, ...) {
+wcls_bread <- function(x, wcovinv = NULL, invert = TRUE, approx = TRUE, ...) {
     approx <- approx & x$family$link != "identity"
     if (is.null(wcovinv)) wcovinv <- working.covariance(x, invert = TRUE)
     g <- if (approx) {
@@ -339,7 +340,7 @@ bread.geeglm <- function(x, wcovinv = NULL, invert = TRUE, approx = TRUE, ...) {
 ## extract projection matrices
 leverage <- function(x, wcovinv = NULL, invert = TRUE) {
     if (is.null(wcovinv)) wcovinv <- working.covariance(x, invert = TRUE)
-    B <- -bread.geeglm(x, wcovinv)
+    B <- -wcls_bread(x, wcovinv)
     g <- if (invert) {
         function(m) solve(diag(nrow(m)) - m)
     } else {
@@ -353,7 +354,7 @@ leverage <- function(x, wcovinv = NULL, invert = TRUE) {
 }
 
 ## extract geeglm's estimating function
-estfun.geeglm <- function(x, wcovinv = NULL, small = TRUE, res = FALSE, ...) {
+wcls_estfun <- function(x, wcovinv = NULL, small = TRUE, res = FALSE, ...) {
     if (is.null(wcovinv)) wcovinv <- working.covariance(x, invert = TRUE)
     ## apply Mancl and DeRouen's (2001) small sample correction
     if (is.logical(small)) small <- small * 50
@@ -387,12 +388,12 @@ estfun.geeglm <- function(x, wcovinv = NULL, small = TRUE, res = FALSE, ...) {
 ## 'pd' gives "denominator" treatment probability
 ## 'pn' gives "numerator" treatment probability
 ## 'label' is the term label for the main treatment effect
-meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
-                        label = NULL, correct.all = TRUE, ...) {
+wcls_meat <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
+                      label = NULL, correct.all = TRUE, ...) {
     if (is.null(wcovinv)) wcovinv <- working.covariance(x, invert = TRUE)
     ## nb: small sample correction threshold can be set via '...'
     ##     no correction is applied to the estimating functions from 'pd' and 'pn'
-    u <- estfun.geeglm(x, wcovinv = wcovinv, res = TRUE, ...)
+    u <- wcls_estfun(x, wcovinv = wcovinv, res = TRUE, ...)
     res <- u$residuals
     small <- u$small
     u <- u$estfun
@@ -421,8 +422,8 @@ meat.geeglm <- function(x, pn = NULL, pd = pn, lag = 0, wcovinv = NULL,
         ## evaluate general expression for extra additive term in meat
         extra <- function(p, sig) {
             v <- working.covariance(p, invert = TRUE)
-            b <- bread.geeglm(p, wcovinv = v, approx = FALSE)
-            estfun.geeglm(p, wcovinv = v, small = FALSE) %*% b %*% t(sig)
+            b <- wcls_bread(p, wcovinv = v, approx = FALSE)
+            wcls_estfun(p, wcovinv = v, small = FALSE) %*% b %*% t(sig)
         }
         ## optionally apply any small-sample correction only to original "meat" term
         if (small & !correct.all) res <- with(x, y - fitted.values)
@@ -575,8 +576,8 @@ vcov_geeglm <- function(x, ...) {
     v <- x$vcov
     if (is.null(v)) {
         w <- working.covariance(x, invert = TRUE)
-        b <- bread.geeglm(x, wcovinv = w)
-        m <- meat.geeglm(x, wcovinv = w, ...)
+        b <- wcls_bread(x, wcovinv = w)
+        m <- wcls_meat(x, wcovinv = w, ...)
         v <- b %*% m %*% t(b)
     }
     v
@@ -646,11 +647,16 @@ estimate <- function(x, combos = NULL, omnibus = FALSE, null = 0,
     out
 }
 
-print.estimate <- function(object, digits = min(getOption("digits"), 3),
-                           signif.stars = TRUE, eps.pvalue = 1e-4, ...) {
-    printCoefmat(object,
+#' @export
+#' @method print estimate
+print.estimate <- function(x,
+                           digits = min(getOption("digits"), 3),
+                           signif.stars = TRUE,
+                           eps.pvalue = 1e-4,
+                           ...) {
+    printCoefmat(x,
         digits = digits, dig.tst = digits,
         signif.stars = signif.stars, has.Pvalue = TRUE,
         eps.Pvalue = eps.pvalue, ...
-    )
+    ) # or eps.Pvalue = eps.pvalue if that was intended
 }
