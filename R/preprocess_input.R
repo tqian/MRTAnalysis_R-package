@@ -79,11 +79,15 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
         # the formula looks like "~x"
     } else if (length(parse.fm_ctl) == 3) {
         # the formula looks like "y ~ x"
-        stop(paste("It seems like you included variables to left of ~.",
-        "control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2."))
+        stop(paste(
+            "It seems like you included variables to left of ~.",
+            "control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2."
+        ))
     } else {
-        stop(paste("Unknown control_formula pattern!",
-        "control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2."))
+        stop(paste(
+            "Unknown control_formula pattern!",
+            "control_formula should look like ~1 or ~ ctrl_var1 + ctrl_var2."
+        ))
     }
     control_matrix <- model.matrix(as.formula(mf$control_formula), data = data)
 
@@ -115,10 +119,12 @@ preprocess_input <- function(data, mf, outcome_type, verbose = TRUE) {
             }
         }
     } else {
-        stop(paste("numerator_prob type mismatch.",
-                   "numerator_prob must be either NULL,",
-                   "or a single numeric number,",
-                   "or a character denoting a column in data."))
+        stop(paste(
+            "numerator_prob type mismatch.",
+            "numerator_prob must be either NULL,",
+            "or a single numeric number,",
+            "or a character denoting a column in data."
+        ))
     }
 
     # checking variable types
