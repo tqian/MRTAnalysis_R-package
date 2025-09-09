@@ -183,8 +183,7 @@ test_that("SuperLearner: goldens for beta / se / V and lincomb", {
         verbose = FALSE,
         # pass through to SuperLearner via ...
         cvControl = SuperLearner::SuperLearner.CV.control(V = 3, shuffle = FALSE)
-    )
-    )
+    ))
 
     # cat("SL beta_hat = "); dput(unclass(fit$fit$beta_hat)); cat("\n")
     # cat("SL beta_se  = "); dput(unclass(fit$fit$beta_se));  cat("\n")
@@ -204,4 +203,3 @@ test_that("SuperLearner: goldens for beta / se / V and lincomb", {
     s <- summary(fit, lincomb = c(0, 1))
     expect_equal(nrow(s$lincomb), 1L)
 })
-

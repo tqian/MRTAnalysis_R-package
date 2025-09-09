@@ -10,6 +10,10 @@ The **MRTAnalysis** package provides functions to conduct post-study analyses of
 - **Distal outcomes** (measured once at end of study):
   - `dcee()`: Exploratory analysis for distal causal excursion effects in MRTs (Qian et al. 2025). Supports linear models and machine-learning learners (lm, gam, random forest, ranger, SuperLearner) with optional cross-fitting.
 
+- **Mediated Effects Through Time-Varying Mediators to Distal Outcomes**
+  -   - `mcee()`: Exploratory analysis for mediated causal excursion effects in MRTs, estimating **natural direct excursion effects (NDEE)** and **natural indirect excursion effects (NIEE)** through time-varying mediators. Supports GLM, GAM, random forest, ranger, and SuperLearner learners for fitting nuisance parameters.
+
+
 ## Installation
 
 You can install the package from CRAN:
@@ -47,6 +51,18 @@ fit2 <- dcee(
   control_reg_method = "lm"
 )
 summary(fit2)
+
+# Mediation with distal outcome
+fit3 <- mcee(
+  data = data_time_varying_mediator_distal_outcome,
+  id = "id", dp = "dp",
+  outcome = "Y", treatment = "A", mediator = "M",
+  availability = "I", rand_prob = "p_A",
+  time_varying_effect_form = ~1,                # constant effects over time
+  control_formula_with_mediator = ~ dp + M + X, # adjustment set
+  control_reg_method = "glm"
+)
+summary(fit3)
 ```
 
 ## References
@@ -56,3 +72,5 @@ summary(fit2)
 - Qian, T., Yoo, H., Klasnja, P., Almirall, D., & Murphy, S. A. (2021). Estimating time-varying causal excursion effects in mobile health with binary outcomes. *Biometrika*, 108(3), 507–527. <doi:10.1093/biomet/asaa070>
 
 - Qian, T. (2025). Distal Causal Excursion Effects: Modeling Long-Term Effects of Time-Varying Treatments in Micro-Randomized Trials. arXiv:2502.13500.
+
+- Qian, T. (2025). Dynamic Causal Mediation Analysis for Intensive Longitudinal Data. arXiv:2506.20027.

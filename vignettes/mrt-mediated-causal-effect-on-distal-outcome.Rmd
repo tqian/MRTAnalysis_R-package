@@ -21,10 +21,12 @@ knitr::opts_chunk$set(
     comment = "#>"
 )
 options(digits = 4)
+
+library(MRTAnalysis)
 ```
 
 
-The `MRTAnalysis` package now supports analysis of mediated causal excursion effect of time-varying treatments, time-varying mediators, and a continuous **distal outcomes** in micro-randomized trials (MRTs), using the function `mcee()`.  
+The `MRTAnalysis` package now supports analysis of mediated causal excursion effect of time-varying treatments, time-varying mediators, and a continuous **distal outcome** in micro-randomized trials (MRTs), using the function `mcee()`.  
 Distal outcomes are measured once at the end of the study (e.g., weight loss, cognitive score), in contrast to **proximal outcomes** which are repeatedly measured after each treatment decision point. Time-varying mediators can often be the proximal outcomes in MRTs.
 
 ## 1. Introduction
@@ -36,7 +38,7 @@ This package implements estimation of the **natural direct excursion effect (NDE
 - The **NIEE** captures the pathway from treatment at decision time \(t\) (\(A_t\)) to the *immediate mediator* (\(M_t\)), and then from \(M_t\) to the distal outcome \(Y\).
 - The **NDEE** lumps together *all other pathways* from \(A_t\) to \(Y\) that do not operate through the immediate mediator.  
 
-The modeling of the the direct and indirect effects is allowed to vary with the **decision point index**, specified through the argument `time_varying_effect_form`. For example, one may model NIEE and NDEE as constants over time (using `~1`) or as quadratic functions of the decision point (using `~ dp + I(dp^2)`). The parameter that parameterizes NIEE is denoted by $\beta$ and the one for NDEE is $\alpha$. At present, the software does *not* support mediation effects conditional on baseline or other time-varying covariates. For full details of the estimands, see @qian2025dynamic.  
+The modeling of the direct and indirect effects is allowed to vary with the **decision point index**, specified through the argument `time_varying_effect_form`. For example, one may model NIEE and NDEE as constants over time (using `~1`) or as quadratic functions of the decision point (using `~ dp + I(dp^2)`). The parameter that parameterizes NIEE is denoted by $\beta$ and the one for NDEE is $\alpha$. At present, the software does *not* support mediation effects conditional on baseline or other time-varying covariates. For full details of the estimands, see @qian2025dynamic.  
 
 ### Estimation framework
 
@@ -82,25 +84,26 @@ We illustrate the most basic usage of `mcee` on a small simulated dataset. Note 
 set.seed(123)
 
 # Simulate a toy dataset
-n <- 20; T_val <- 5
+n <- 20
+T_val <- 5
 id <- rep(1:n, each = T_val)
 dp <- rep(1:T_val, times = n)
-A  <- rbinom(n * T_val, 1, 0.5)
-M  <- rbinom(n * T_val, 1, plogis(-0.2 + 0.3*A + 0.1*dp))
-Y  <- ave(0.5*A + 0.7*M + 0.2*dp + rnorm(n * T_val), id)  # constant within id
+A <- rbinom(n * T_val, 1, 0.5)
+M <- rbinom(n * T_val, 1, plogis(-0.2 + 0.3 * A + 0.1 * dp))
+Y <- ave(0.5 * A + 0.7 * M + 0.2 * dp + rnorm(n * T_val), id) # constant within id
 
 dat <- data.frame(id, dp, A, M, Y)
 
 # Minimal mcee call
 fit <- mcee(
-  data = dat,
-  id = "id", dp = "dp",
-  outcome = "Y", treatment = "A", mediator = "M",
-  time_varying_effect_form = ~ 1,                # constant-over-time NDEE and NIEE
-  control_formula_with_mediator = ~ dp + M,      # nuisance adjustment
-  control_reg_method = "glm",                   # default method
-  rand_prob = 0.5,                               # known randomization prob
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp",
+    outcome = "Y", treatment = "A", mediator = "M",
+    time_varying_effect_form = ~1, # constant-over-time NDEE and NIEE
+    control_formula_with_mediator = ~ dp + M, # nuisance adjustment
+    control_reg_method = "glm", # default method
+    rand_prob = 0.5, # known randomization prob
+    verbose = FALSE
 )
 
 summary(fit)
@@ -137,14 +140,13 @@ dat <- data_time_varying_mediator_distal_outcome
 dplyr::glimpse(dat)
 
 dplyr::count(dat, id, name = "Ti") |>
-  dplyr::summarise(mean_T = mean(Ti), min_T = min(Ti), max_T = max(Ti))
+    dplyr::summarise(mean_T = mean(Ti), min_T = min(Ti), max_T = max(Ti))
 
 # Delete some decision points for certain individuals to mimic scenarios
 # where not all individuals have the same number of decision points.
-dat <- dat[!( (dat$id == 1 & dat$dp == 10) | (dat$id == 2 & dat$dp %in% c(9,10)) ), ]
+dat <- dat[!((dat$id == 1 & dat$dp == 10) | (dat$id == 2 & dat$dp %in% c(9, 10))), ]
 dplyr::count(dat, id, name = "Ti") |>
-  dplyr::summarise(mean_T = mean(Ti), min_T = min(Ti), max_T = max(Ti))
-
+    dplyr::summarise(mean_T = mean(Ti), min_T = min(Ti), max_T = max(Ti))
 ```
 
 ---
@@ -158,18 +160,18 @@ We focus first on the streamlined MRT workflow with known randomization probabil
 ```{r basid_usage}
 set.seed(1)
 fit1 <- mcee(
-  data = dat,
-  id   = "id",
-  dp   = "dp",
-  outcome   = "Y",
-  treatment = "A",
-  mediator  = "M",
-  availability = "I",             
-  rand_prob = "p_A",              
-  time_varying_effect_form = ~ 1,   # NDEE and NIEE are constant over time
-  control_formula_with_mediator = ~ dp + M + X,  # covariate adjustment
-  control_reg_method = "glm",      # nuisance learners for q, eta, mu, nu
-  verbose = FALSE
+    data = dat,
+    id = "id",
+    dp = "dp",
+    outcome = "Y",
+    treatment = "A",
+    mediator = "M",
+    availability = "I",
+    rand_prob = "p_A",
+    time_varying_effect_form = ~1, # NDEE and NIEE are constant over time
+    control_formula_with_mediator = ~ dp + M + X, # covariate adjustment
+    control_reg_method = "glm", # nuisance learners for q, eta, mu, nu
+    verbose = FALSE
 )
 summary(fit1)
 ```
@@ -181,15 +183,15 @@ summary(fit1)
 
 ```{r time_varying_effect}
 fit2 <- mcee(
-  data = dat,
-  id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
-  availability = "I", rand_prob = "p_A",
-  time_varying_effect_form = ~ dp,      # NDEE, NIEE vary linearly in time
-  control_formula_with_mediator = ~ dp + M + X,
-  control_reg_method = "glm",
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
+    availability = "I", rand_prob = "p_A",
+    time_varying_effect_form = ~dp, # NDEE, NIEE vary linearly in time
+    control_formula_with_mediator = ~ dp + M + X,
+    control_reg_method = "glm",
+    verbose = FALSE
 )
-summary(fit2)  # rows now labeled (Intercept) and dp
+summary(fit2) # rows now labeled (Intercept) and dp
 ```
 
 Interpretation: the rows for `dp` report how the natural direct/indirect excursion effects change per unit increase in decision point.
@@ -209,13 +211,13 @@ You can switch the learner used for fitting the nuisance functions via `control_
 # Example: GAM (generalized additive model)
 set.seed(2)
 fit3 <- mcee(
-  data = dat,
-  id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
-  availability = "I", rand_prob = "p_A",
-  time_varying_effect_form = ~ dp,
-  control_formula_with_mediator = ~ s(dp) + s(M) + s(X), # spline formula for mgcv::gam
-  control_reg_method = "gam",
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
+    availability = "I", rand_prob = "p_A",
+    time_varying_effect_form = ~dp,
+    control_formula_with_mediator = ~ s(dp) + s(M) + s(X), # spline formula for mgcv::gam
+    control_reg_method = "gam",
+    verbose = FALSE
 )
 summary(fit3)
 ```
@@ -230,14 +232,14 @@ If interested in estimating direct and indirect effects of intervention at a spe
 
 ```{r specific_dp_only}
 fit4 <- mcee(
-  data = dat,
-  id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
-  availability = "I", rand_prob = "p_A",
-  time_varying_effect_form = ~ 1,
-  control_formula_with_mediator = ~ dp + M + X,
-  control_reg_method = "glm",
-  specific_dp_only = c(1, 2),
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
+    availability = "I", rand_prob = "p_A",
+    time_varying_effect_form = ~1,
+    control_formula_with_mediator = ~ dp + M + X,
+    control_reg_method = "glm",
+    specific_dp_only = c(1, 2),
+    verbose = FALSE
 )
 summary(fit4)
 ```
@@ -277,13 +279,13 @@ This requests the linear combination $\alpha - \beta$, with standard error and t
 Suppose you fit a model with a linear time basis, e.g.:
 ```{r lincomb_example2}
 fit2 <- mcee(
-  data = dat,
-  id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
-  availability = "I", rand_prob = "p_A",
-  time_varying_effect_form = ~ dp,
-  control_formula_with_mediator = ~ dp + M + X,
-  control_reg_method = "glm",
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp", outcome = "Y", treatment = "A", mediator = "M",
+    availability = "I", rand_prob = "p_A",
+    time_varying_effect_form = ~dp,
+    control_formula_with_mediator = ~ dp + M + X,
+    control_reg_method = "glm",
+    verbose = FALSE
 )
 ```
 To get the effect at decision point 10 (the last decision point), you need the intercept plus 9 times the slope:
@@ -294,9 +296,10 @@ summary(fit2, lincomb_alpha = c(1, 9), lincomb_beta = c(1, 9))
 If you prefer a joint contrast (e.g., alpha(t=10) − beta(t=10)), stack the two contrasts into a single row over `c(alpha, beta)`:
 
 ```{r lincomb_example2_joint}
-L_joint_t10 <- matrix(c(1, 9,   # alpha part
-                        -1, -9  # beta part
-                        ), nrow = 1)
+L_joint_t10 <- matrix(c(
+    1, 9, # alpha part
+    -1, -9 # beta part
+), nrow = 1)
 summary(fit2, lincomb_joint = L_joint_t10)
 ```
 
@@ -341,22 +344,22 @@ Helper functions can be used to build these objects: `mcee_config_maker`, `mcee_
 # Families (binomial vs Gaussian) are chosen automatically when omitted; for `p` and `q` the default is binomial, for the outcome regressions it is Gaussian.
 
 cfg <- list(
-  p   = mcee_config_known("p", dat$p_A),  # known randomization prob in MRT
-  q   = mcee_config_glm("q", ~ dp + X + M),
-  eta = mcee_config_glm("eta", ~ dp + X),
-  mu  = mcee_config_glm("mu", ~ dp + X + M),
-  nu  = mcee_config_glm("nu", ~ dp + X)
+    p   = mcee_config_known("p", dat$p_A), # known randomization prob in MRT
+    q   = mcee_config_glm("q", ~ dp + X + M),
+    eta = mcee_config_glm("eta", ~ dp + X),
+    mu  = mcee_config_glm("mu", ~ dp + X + M),
+    nu  = mcee_config_glm("nu", ~ dp + X)
 )
 
 fit_gen <- mcee_general(
-  data = dat,
-  id = "id", dp = "dp", outcome = "Y",
-  treatment = "A", mediator = "M",
-  availability = "I",
-  time_varying_effect_form = ~ dp,
-  config_p = cfg$p, config_q = cfg$q,
-  config_eta = cfg$eta, config_mu = cfg$mu, config_nu = cfg$nu,
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp", outcome = "Y",
+    treatment = "A", mediator = "M",
+    availability = "I",
+    time_varying_effect_form = ~dp,
+    config_p = cfg$p, config_q = cfg$q,
+    config_eta = cfg$eta, config_mu = cfg$mu, config_nu = cfg$nu,
+    verbose = FALSE
 )
 summary(fit_gen)
 ```
@@ -385,7 +388,8 @@ Sometimes you fit nuisance models externally, perhaps with custom ML workflows. 
 p1_hat <- dat$p_A # known randomization prob in MRT
 p1_hat[dat$I == 0] <- 1 # manually set this to avoid wrapper message
 q1_hat <- predict(glm(A ~ dp + X + M, family = binomial(), data = dat[dat$I == 1, ]),
-                  type = "response", newdata = dat)
+    type = "response", newdata = dat
+)
 q1_hat[dat$I == 0] <- 1 # manually set this to avoid wrapper message
 eta1_hat <- predict(lm(Y ~ dp + X, data = dat[dat$A == dat$I, ]), newdata = dat)
 eta0_hat <- predict(lm(Y ~ dp + X, data = dat[dat$A == 0, ]), newdata = dat)
@@ -395,17 +399,17 @@ nu1_hat <- predict(lm(mu1 ~ dp + X, data = cbind(dat, mu1 = mu1_hat)[dat$A == 0,
 nu0_hat <- predict(lm(mu0 ~ dp + X, data = cbind(dat, mu0 = mu0_hat)[dat$A == dat$I, ]), newdata = dat)
 
 fit_usr <- mcee_userfit_nuisance(
-  data = dat,
-  id = "id", dp = "dp", outcome = "Y",
-  treatment = "A", mediator = "M",
-  availability = "I",
-  time_varying_effect_form = ~ dp,
-  p1 = p1_hat,
-  q1 = q1_hat,
-  eta1 = eta1_hat, eta0 = eta0_hat,
-  mu1  = mu1_hat,  mu0  = mu0_hat,
-  nu1  = nu1_hat,  nu0  = nu0_hat,
-  verbose = FALSE
+    data = dat,
+    id = "id", dp = "dp", outcome = "Y",
+    treatment = "A", mediator = "M",
+    availability = "I",
+    time_varying_effect_form = ~dp,
+    p1 = p1_hat,
+    q1 = q1_hat,
+    eta1 = eta1_hat, eta0 = eta0_hat,
+    mu1 = mu1_hat, mu0 = mu0_hat,
+    nu1 = nu1_hat, nu0 = nu0_hat,
+    verbose = FALSE
 )
 summary(fit_usr)
 ```
@@ -449,8 +453,6 @@ The `mcee` package provides a multiply robust estimator of **natural direct and 
 
 Together, these tools allow both applied researchers and methodologists to estimate mediated excursion effects with transparent assumptions and flexible modeling options.
 
-
-## Reference
 
 
 ## Appendix: Estimating Equations and Asymptotic Variance
@@ -529,3 +531,6 @@ where
   \end{bmatrix}
 \right)^{\otimes 2}.
 \]
+
+
+## Reference
